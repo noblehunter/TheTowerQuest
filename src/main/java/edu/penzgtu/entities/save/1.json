@@ -1,0 +1,33 @@
+{
+  "currentRoomId" : 0,
+  "player" : {
+    "health" : 100,
+    "name" : "1",
+    "gender" : "женский",
+    "age" : 1,
+    "inventory" : [ {
+      "name" : "Меч",
+      "description" : "Старый меч",
+      "type" : "weapon",
+      "effect" : "damage 30"
+    }, {
+      "name" : "Кольчужная броня",
+      "description" : "Поношенная кольчуга",
+      "type" : "armor",
+      "effect" : "armor 20"
+    } ],
+    "equippedWeapon" : {
+      "name" : "Меч",
+      "description" : "Старый меч",
+      "type" : "weapon",
+      "effect" : "damage 30"
+    },
+    "equippedArmor" : {
+      "name" : "Кольчужная броня",
+      "description" : "Поношенная кольчуга",
+      "type" : "armor",
+      "effect" : "armor 20"
+    }
+  },
+  "doorBroken" : false
+}
