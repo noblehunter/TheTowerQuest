@@ -1,30 +1,29 @@
-package edu.penzgtu;
+package edu.penzgtu.game;
 
-import edu.penzgtu.entities.GameState;
 import edu.penzgtu.entities.Player;
 import edu.penzgtu.entities.RoomType;
-import edu.penzgtu.game.*;
 import edu.penzgtu.services.GameService;
+import edu.penzgtu.entities.GameState;
 import edu.penzgtu.services.SaveLoadService;
 import edu.penzgtu.ui.GameUI;
-import edu.penzgtu.ui.SwingUI;
-
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.HashMap;
+import edu.penzgtu.Main;
+import edu.penzgtu.entities.Item;
 
 
-public class Main {
-    private static Map<Integer, GameAction> actions;
+public class ExitToMenuEvent implements GameEvent{
+    private final SaveLoadService saveLoadService;
+    public ExitToMenuEvent(SaveLoadService saveLoadService) {
+        this.saveLoadService = saveLoadService;
+    }
 
-    public static void main(String[] args) throws IOException {
-        GameUI ui = new SwingUI();
-        SaveLoadService saveLoadService = new SaveLoadService();
+    @Override
+    public void execute(GameUI ui, GameService gameService) throws IOException {
         initialScreen(ui, saveLoadService);
     }
-    private static void initialScreen(GameUI ui, SaveLoadService saveLoadService) throws IOException {
+    private void initialScreen(GameUI ui, SaveLoadService saveLoadService) throws IOException {
         boolean inInitialScreen = true;
         String menuOptions = "1. Новая игра\n" +
                 "2. Загрузить игру\n" +
@@ -66,48 +65,108 @@ public class Main {
         }
     }
 
-
-    private static Player createPlayer(GameUI ui) {
+    private  Player createPlayer(GameUI ui) {
         ui.showOutput("\n--- Создание персонажа ---");
         ui.showOutput("Введите имя вашего персонажа:");
         String playerName = ui.getItemNameInput();
         ui.showOutput("Имя персонажа: " + playerName);
         return new Player(playerName);
     }
-
-    private static void gameLoop(GameUI ui, GameService gameService, SaveLoadService saveLoadService) throws IOException {
+    private void gameLoop(GameUI ui, GameService gameService, SaveLoadService saveLoadService) throws IOException {
         Random random = new Random();
         Player player = gameService.getPlayer();
         Main MainInstance = new Main();
         String prevMessage = "";
-        actions = createActions(saveLoadService, random);
-
 
         while (player.getHealth() > 0 && !player.hasArtifact()) {
             gameService.showGameScreen();
-            ui.showMenu(getMenuOptions());
+            gameService.showMenu(getMenuOptions());
             int action = ui.getUserInput();
-            GameEvent event = actions.get(action).getEvent();
-            if(event != null) {
-                event.execute(ui, gameService);
-                if (gameService.getGameState().getCurrentRoomId() == RoomType.GO_HOME.ordinal() || gameService.getGameState().getCurrentRoomId() ==  RoomType.END_GAME_1.ordinal() || gameService.getGameState().getCurrentRoomId() ==  RoomType.END_GAME_2.ordinal() || gameService.getGameState().getCurrentRoomId() ==  RoomType.END_GAME_3.ordinal() || gameService.getGameState().getCurrentRoomId() ==  RoomType.END_GAME_4.ordinal()){
-                    endGame(ui, saveLoadService, gameService);
-                    return;
-                }
-            } else {
-                if (gameService.getGameState().getCurrentRoomId() == 0) {
-                    if (action == 1){
+            String message = "";
+            switch (action) {
+                case 1:
+                    ui.clearScreen();
+                    String availableRooms = gameService.showAvailableRooms();
+                    gameService.showMenu(availableRooms);
+                    int roomChoice = ui.getUserInput();
+                    int roomId = 0;
+                    if(gameService.getGameState().getCurrentRoomId() == 0) {
+                        if (roomChoice == 1) {
+                            initialScreen(ui, saveLoadService);
+                            return;
+                        }
+                        else if (roomChoice == 2) {
+                            roomId = RoomType.BEFORE_TOWER.ordinal();
+                        }
+                    }  else{
+                        if (gameService.getGameState().getRoomConnections().containsKey(RoomType.values()[gameService.getGameState().getCurrentRoomId()])) {
+                            List<RoomType> connections = gameService.getGameState().getRoomConnections().get(RoomType.values()[gameService.getGameState().getCurrentRoomId()]);
+                            if(roomChoice > 0 && roomChoice <= connections.size()) {
+                                roomId = connections.get(roomChoice - 1).ordinal();
+                            } else {
+                                ui.showOutput("Неверный номер комнаты.");
+                            }
+                        }
+                    }
+                    gameService.movePlayerToRoom(roomId);
+                    if (gameService.getGameState().getCurrentRoomId() == RoomType.GO_HOME.ordinal() || gameService.getGameState().getCurrentRoomId() ==  RoomType.END_GAME_1.ordinal() || gameService.getGameState().getCurrentRoomId() ==  RoomType.END_GAME_2.ordinal() || gameService.getGameState().getCurrentRoomId() ==  RoomType.END_GAME_3.ordinal() || gameService.getGameState().getCurrentRoomId() ==  RoomType.END_GAME_4.ordinal()){
                         endGame(ui, saveLoadService, gameService);
                         return;
                     }
-                    if (action == 2) {
-                        gameService.movePlayerToRoom(RoomType.BEFORE_TOWER.ordinal());
+                    gameService.showGameScreen();
+                    break;
+                case 2:
+                    ui.clearScreen();
+                    ui.showOutput(gameService.showAvailableItems());
+                    String itemName = ui.getItemNameInput();
+                    gameService.pickUpItem(itemName);
+                    break;
+                case 3:
+                    ui.clearScreen();
+                    if (gameService.hasMonsterInCurrentRoom()) {
+                        String monsterName = ui.getMonsterNameInput();
+                        if (!battleMenu(ui, gameService, monsterName, "battle", prevMessage)) {
+                            initialScreen(ui, saveLoadService);
+                            return;
+                        }
                     }
-                }else {
-                    ui.showOutput("Неверный выбор действия.");
-                }
+                    break;
+                case 4:
+                    detailedRoomLoop(ui, gameService);
+                    break;
+                case 5:
+                    ui.showOutput(player.toString());
+                    break;
+                case 6:
+                    ui.showOutput(gameService.showInventory());
+                    ui.showOutput("Какой предмет вы хотите использовать?\n");
+                    String itemNameForUse = ui.getItemNameInput();
+                    ui.showOutput(gameService.useItem(itemNameForUse, ui));
+                    ui.showOutput("Какой предмет вы хотите экипировать?\n");
+                    String itemNameForEquip = ui.getItemNameInput();
+                    ui.showOutput(gameService.equipItem(itemNameForEquip));
+                    break;
+                case 7:
+                    ui.showOutput("Введите номер слота для сохранения (1-10):");
+                    int saveSlot = ui.getUserInput();
+                    try {
+                        saveLoadService.saveGame(gameService.getGameState(), saveSlot);
+                        ui.showOutput("Игра сохранена");
+                    } catch (IOException e) {
+                        ui.showOutput("Не удалось сохранить игру.");
+                    }
+                    break;
+                case 8:
+                    if (gameService.hasArtifactInCurrentRoom()) {
+                        handleDoor(ui, gameService, random);
+                    } else {
+                        ui.showOutput("В этой комнате нет двери.\n");
+                    }
+                    break;
+                case 9:
+                    initialScreen(ui, saveLoadService);
+                    return;
             }
-
         }
         if (player.hasArtifact()) {
             ui.showOutput("Поздравляем, вы победили!");
@@ -116,7 +175,7 @@ public class Main {
         }
         initialScreen(ui, saveLoadService);
     }
-    private static void endGame(GameUI ui, SaveLoadService saveLoadService, GameService gameService) throws IOException{
+    private  void endGame(GameUI ui, SaveLoadService saveLoadService, GameService gameService) throws IOException{
         while(true){
             ui.showMenu("0. Выйти в главное меню");
             int action = ui.getUserInput();
@@ -128,14 +187,18 @@ public class Main {
             }
         }
     }
-    private static String getMenuOptions() {
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<Integer, GameAction> entry : actions.entrySet()) {
-            sb.append(entry.getKey()).append(". ").append(entry.getValue().getName()).append("\n");
-        }
-        return sb.toString();
+    private String getMenuOptions() {
+        return "1. Перейти к \n" +
+                "2. Подобрать предмет\n" +
+                "3. Сразиться с монстром?\n" +
+                "4. Что я вижу вокруг?\n" +
+                "5. Персонаж\n" +
+                "6. Инвентарь\n" +
+                "7. Сохранить игру\n" +
+                "8. Попробовать взломать дверь\n" +
+                "9. Выйти в главное меню\n";
     }
-    private static boolean battleMenu(GameUI ui, GameService gameService, String monsterName, String type, String prevMessage) throws IOException {
+    private boolean battleMenu(GameUI ui, GameService gameService, String monsterName, String type, String prevMessage) throws IOException {
         while (type.equals("battle")){
             if(gameService.battle(monsterName, ui)){
                 if (gameService.getPlayer().getHealth() <= 0) {
@@ -146,7 +209,7 @@ public class Main {
         }
         return true;
     }
-    private static void detailedRoomLoop(GameUI ui, GameService gameService) {
+    private void detailedRoomLoop(GameUI ui, GameService gameService) {
         boolean inDetailedRoom = true;
         while (inDetailedRoom) {
             ui.clearScreen();
@@ -158,7 +221,7 @@ public class Main {
             }
         }
     }
-    private static void handleDoor(GameUI ui, GameService gameService, Random random) {
+    private  void handleDoor(GameUI ui, GameService gameService, Random random) {
         if (gameService.getGameState().getCurrentRoomId() == RoomType.BEFORE_TOWER.ordinal() && !gameService.getGameState().isDoorBroken()) {
             int attempts = 3;
             boolean success = false;
@@ -189,7 +252,7 @@ public class Main {
             ui.showOutput("Вы не можете взломать дверь здесь.");
         }
     }
-    private static void inventoryMenu(GameUI ui, GameService gameService, String prevMessage) throws IOException {
+    private  void inventoryMenu(GameUI ui, GameService gameService, String prevMessage) throws IOException {
         while (true) {
             String inventory = gameService.showInventory();
             if (inventory.equals("Инвентарь пуст.\n")) {
@@ -205,7 +268,7 @@ public class Main {
             }
             Player player = gameService.getPlayer();
             if(choice > 0 && choice <= player.getInventory().size()) {
-                edu.penzgtu.entities.Item selectedItem = player.getInventory().get(choice - 1);
+                Item selectedItem = player.getInventory().get(choice - 1);
                 ui.showOutput("Вы выбрали " + selectedItem.getName() + ".\n");
                 ui.showOutput("1. Использовать предмет\n");
                 ui.showOutput("2. Экипировать предмет\n");
@@ -235,18 +298,5 @@ public class Main {
                 ui.showErrorAndMenu("Неверный выбор предмета\n", inventoryMenuOptions, inventory, prevMessage);
             }
         }
-    }
-    private static Map<Integer, GameAction> createActions(SaveLoadService saveLoadService, Random random){
-        Map<Integer, GameAction> actions = new HashMap<>();
-        actions.put(1, new GameAction("Перейти к", null));
-        actions.put(2, new GameAction("Подобрать предмет", new PickUpItemEvent(null)));
-        actions.put(3, new GameAction("Сразиться с монстром?", new BattleEvent(null)));
-        actions.put(4, new GameAction("Что я вижу вокруг?", new DetailedRoomEvent()));
-        actions.put(5, new GameAction("Персонаж", new ShowPlayerInfoEvent()));
-        actions.put(6, new GameAction("Инвентарь", new UseItemEvent(null, null)));
-        actions.put(7, new GameAction("Сохранить игру", new SaveGameEvent(0, saveLoadService)));
-        actions.put(8, new GameAction("Попробовать взломать дверь", new HandleDoorEvent(random)));
-        actions.put(9, new GameAction("Выйти в главное меню", new ExitToMenuEvent(saveLoadService)));
-        return actions;
     }
 }

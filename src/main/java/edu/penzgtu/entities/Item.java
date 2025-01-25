@@ -1,21 +1,21 @@
 package edu.penzgtu.entities;
 
-// --- Предметы ---
-
 public class Item {
     private String name;
-    private String description;
-    private String type;
-    private String effect;
 
+    private String type;
+    private String description;
+    private String effect;
     public Item() {
-        // Конструктор без аргументов (default constructor)
     }
 
-    public Item(String name, String description, String type, String effect) {
+    public Item(String name) {
         this.name = name;
-        this.description = description;
+    }
+    public Item(String name, String type, String description, String effect) {
+        this.name = name;
         this.type = type;
+        this.description = description;
         this.effect = effect;
     }
 
@@ -23,43 +23,35 @@ public class Item {
         return name;
     }
 
-    public String getDescription() {
-        return description;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getType() {
         return type;
     }
 
-    public String getEffect() {
-        return effect;
-    }
     public void setType(String type) {
         this.type = type;
     }
 
-    public void setEffect(String effect) {
-        this.effect = effect;
-    }
-
-    public void setName(String name) {
-        this.name = name;
+    public String getDescription() {
+        return description;
     }
 
     public void setDescription(String description) {
         this.description = description;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Item item = (Item) obj;
-        return name.equals(item.name);
+    public String getEffect() {
+        return effect;
     }
 
+    public void setEffect(String effect) {
+        this.effect = effect;
+    }
     @Override
-    public int hashCode() {
-        return name.hashCode();
+    public String toString() {
+        return  name;
     }
 }

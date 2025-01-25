@@ -1,38 +1,23 @@
 package edu.penzgtu.entities;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class Room {
     private int id;
     private String description;
-    private List<Item> items;
-    private Map<String, Monster> monsters;
-
+    private Item item;
+    private Monster monster;
     private boolean hasArtifact;
 
-    public Room(int id, String description) {
+
+
+    public Room(int id, String description, Item item, Monster monster) {
         this.id = id;
         this.description = description;
-        this.items = new ArrayList<>();
-        this.monsters = new HashMap<>();
-        this.hasArtifact = false;
-
+        this.item = item;
+        this.monster = monster;
     }
 
-    public void setHasArtifact(boolean hasArtifact) {
-        this.hasArtifact = hasArtifact;
-    }
-
-    public boolean hasArtifact() {
-        return hasArtifact;
-    }
-    public void removeArtifact() {
-        this.hasArtifact = false;
-    }
-
+    // ... (Getters and Setters)
 
     public int getId() {
         return id;
@@ -42,25 +27,35 @@ public class Room {
         return description;
     }
 
-    public List<Item> getItems() {
-        return items;
-    }
-    public void addItem(Item item) {
-        this.items.add(item);
-    }
-    public void removeMonster(String monsterName) {
-        this.monsters.remove(monsterName);
+    public Item getItem() {
+        return item;
     }
 
-    public Map<String, Monster> getMonsters() {
-        return monsters;
+    public void setItem(Item item) {
+        this.item = item;
     }
-    public void addMonster(Monster monster) {
-        monsters.put(monster.getName(), monster);
+
+    public Monster getMonster() {
+        return monster;
     }
-    public boolean hasMonster(String monsterName) {
-        return monsters.containsKey(monsterName);
+
+    public void setMonster(Monster monster) {
+        this.monster = monster;
+    }
+
+    public void removeMonster() {
+        this.monster = null;
     }
 
 
+    public boolean hasArtifact() {
+        return hasArtifact;
+    }
+
+    public void setHasArtifact(boolean hasArtifact) {
+        this.hasArtifact = hasArtifact;
+    }
+    public void removeArtifact() {
+        this.hasArtifact = false;
+    }
 }
